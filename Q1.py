@@ -9,8 +9,8 @@
 import socket
 import socketserver
 import pickle
-import sys
 import os
+from Snowfall import aggregateSnowfall
 
 port = 25565
 address = 'localhost'
@@ -30,8 +30,7 @@ def run_server():
     while True:
         client_socket, clientaddress = server_socket.accept()
         
-        
-        
+             
 def run_client(address, port):
     # initialize TCP connection
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -41,7 +40,8 @@ def run_client(address, port):
     print("Client is connected to {address}:{port}")
     
     # Get directory from user
-    print("Enter a directory")
+    print("Calculate local snowfall and send it to server")
+    print("Enter the directory where the snowfall data is stored")
     directory = input()
     
     files = os.listdir(directory) # Get files in directory
@@ -58,30 +58,32 @@ def run_client(address, port):
         print(key + " : " + value)
         
     # Get file number from user
-    print("Enter a file number")
+    print("Enter the file number corresponding to the snowfall data you want to send")
     file_num = input()
     
-    pickledFile = pickle_file(files_dict[int(file_num)]) # Pickle selected file
+    # Get file path from dictionary
+    file_path = files_dict[int(file_num)]
+    
+    snowfallData = aggregateSnowfall(file_path)
+    
+    
+    
     
     
     
     client_socket.close() # Close connection
 
 
-def pickle_file(file_path):
+def pickle_file(object):
     """ Pickles file; creates a new (pickled) file in the same directory as the original
         Calls read_file_to_object to pickle
 
     Args:
-        file_path (string): Path to file to be pickled
+        object (object): Object to be pickled
         
     Returns:
         string: Path to new (pickled) file
     """
-    # Create new file
-    file = open(file_path, 'rb') # Open file
-    file_object = file.read() # Read file
-    file.close() # Close file
     
     
     
