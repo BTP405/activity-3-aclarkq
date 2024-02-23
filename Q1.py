@@ -7,84 +7,16 @@
 #Ensure error handling for file I/O operations, socket connections, and pickling/unpickling.
 
 import socket
-import socketserver
 import pickle
 import os
 from Snowfall import aggregateSnowfall
 
 port = 25565
 address = 'localhost'
-
-def run_server():
-    """
-    Starts the server
-    """
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_address = (address, port)
-    server_socket.bind(server_address)
-    server_socket.listen(1)
-    
-    print("Server is listening on {address}:{port}")
-    
-    # List of connections
-    connections = []
-    
-    #while loop for waiting for a connection
-    while True:
-        client_socket, clientaddress = server_socket.accept()
         
-             
-def run_client(address, port):
-    # initialize TCP connection
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_address = (address, port)
-    client_socket.connect(server_address)
-    
-    print("Client is connected to {address}:{port}")
-    
-    # Get directory from user
-    print("Calculate local snowfall and send it to server")
-    directory = directory_selector()
-    
-    files_dict = list_files(directory) # List and display files in directory
-        
-    file_num = input("Enter the file number corresponding to the snowfall data you want to send")
-    file_path = files_dict[int(file_num)] # Get file path from dictionary
-    
-    snowfallData = aggregateSnowfall(file_path) # Create dictionary of snowfall heights
-    
-    pkl_File_Name = input("Enter the name of the file you want to create for pickling") + ".pkl"# Create a file for pickling
-    
-    pickle_file(snowfallData, pkl_File_Name) # Pickle file
-    
-    client_socket.send(pkl_File_Name.encode()) # Send pickled file to server
-    
-    
-    
-    # client_socket.close() # Close connection
-
-
-def pickle_file(object, pkl_File_Name):
-    """ Pickles file; creates a new (pickled) file in the same directory as the original
-        Calls read_file_to_object to pickle
-
-    Args:
-        object (object): Object to be pickled
-        pkl_File_Name (string): Name of new (pickled) file
-        
-    Returns:
-        string: Path to new (pickled) file
-    """
-    # Pickle the file
-    pkl_File = open(pkl_File_Name, "wb")
-    pickle.dump(object, pkl_File)
-    pkl_File.close()
-    
-    return pkl_File_Name
-    
-def directory_selector():
+def directory_selector(str_type):
     """ Selects directory """
-    print("Enter the directory where the snowfall data is stored")
+    print("Enter the directory where the data is" + str_type)
     directory = input()
     
     # Check if directory exists and is not empty
@@ -93,7 +25,7 @@ def directory_selector():
     else:
         print("Directory does not exist or is empty. Please try again.")
         directory_selector()
-    
+        
 def list_files(directory):
     """ Lists files in directory """
     files = os.listdir(directory) # Get files in directory
@@ -110,10 +42,105 @@ def list_files(directory):
         print(key + " : " + value)
         
     return files_dict
+             
+def run_client(address, port):
+    # initialize TCP connection
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_address = (address, port)
+    client_socket.connect(server_address)
+
+    print(f"Client is connected to {address}:{port}")
+
+    try:
+        # Use the directory_selector function to get a valid directory
+        directory = directory_selector("stored")
+
+        # Use the list_files function to list and get files in the directory
+        files_dict = list_files(directory)
+
+        # Get file number from user
+        file_num = input("Enter the file number corresponding to the file you want to send: ")
+
+        # Get file path from dictionary
+        file_path = files_dict[file_num]
+
+        # Read the file content
+        with open(file_path, 'rb') as file:
+            file_content = file.read()
+
+        # Create a dictionary to hold file information
+        file_data = {'name': file_path.split('/')[-1], 'content': file_content}
+
+        # Pickle the file object
+        pickled_data = pickle.dumps(file_data)
+
+        # Send the pickled file object
+        client_socket.sendall(pickled_data)
+
+        print("File sent successfully")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+    finally:
+        client_socket.close()
     
 
-def unpickle_file():
-    """ Unpickles file """
+def receive_file(client_socket, save_directory):
+    try:
+        # Receive the pickled file object
+        data = client_socket.recv(4096)
+        if not data:
+            print("Error: No data received.")
+            return
+
+        # Unpickle the file object
+        file_data = pickle.loads(data)
+
+        # Extract file information
+        file_name = file_data['name']
+        file_content = file_data['content']
+
+        # Save the file to the specified directory
+        file_path = os.path.join(save_directory, file_name)
+        with open(file_path, 'wb') as file:
+            file.write(file_content)
+
+        print(f"File received and saved to {file_path}")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+def run_server(address, port):
+    """
+    Starts the server
+    """
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_address = (address, port)
+    server_socket.bind(server_address)
+    server_socket.listen(1)
+
+    print(f"Server is listening on {address}:{port}")
+
+    try:
+        # Use the directory_selector function to get a valid directory
+        save_directory = directory_selector("saved at")
+
+        # Infinite loop for waiting for a connection
+        while True:
+            client_socket, client_address = server_socket.accept()
+            print(f"Connection from {client_address}")
+
+            # Use the receive_file function to handle file reception
+            receive_file(client_socket, save_directory)
+
+            client_socket.close()
+
+    except Exception as e:
+        print(f"Server Error: {e}")
+
+    finally:
+        server_socket.close()
     
     
 
