@@ -26,6 +26,9 @@ def run_server():
     
     print("Server is listening on {address}:{port}")
     
+    # List of connections
+    connections = []
+    
     #while loop for waiting for a connection
     while True:
         client_socket, clientaddress = server_socket.accept()
@@ -41,9 +44,58 @@ def run_client(address, port):
     
     # Get directory from user
     print("Calculate local snowfall and send it to server")
+    directory = directory_selector()
+    
+    files_dict = list_files(directory) # List and display files in directory
+        
+    file_num = input("Enter the file number corresponding to the snowfall data you want to send")
+    file_path = files_dict[int(file_num)] # Get file path from dictionary
+    
+    snowfallData = aggregateSnowfall(file_path) # Create dictionary of snowfall heights
+    
+    pkl_File_Name = input("Enter the name of the file you want to create for pickling") + ".pkl"# Create a file for pickling
+    
+    pickle_file(snowfallData, pkl_File_Name) # Pickle file
+    
+    client_socket.send(pkl_File_Name.encode()) # Send pickled file to server
+    
+    
+    
+    # client_socket.close() # Close connection
+
+
+def pickle_file(object, pkl_File_Name):
+    """ Pickles file; creates a new (pickled) file in the same directory as the original
+        Calls read_file_to_object to pickle
+
+    Args:
+        object (object): Object to be pickled
+        pkl_File_Name (string): Name of new (pickled) file
+        
+    Returns:
+        string: Path to new (pickled) file
+    """
+    # Pickle the file
+    pkl_File = open(pkl_File_Name, "wb")
+    pickle.dump(object, pkl_File)
+    pkl_File.close()
+    
+    return pkl_File_Name
+    
+def directory_selector():
+    """ Selects directory """
     print("Enter the directory where the snowfall data is stored")
     directory = input()
     
+    # Check if directory exists and is not empty
+    if os.path.exists(directory) and os.listdir(directory):
+        return directory
+    else:
+        print("Directory does not exist or is empty. Please try again.")
+        directory_selector()
+    
+def list_files(directory):
+    """ Lists files in directory """
     files = os.listdir(directory) # Get files in directory
     
     # Assign files to a dictionary
@@ -57,41 +109,14 @@ def run_client(address, port):
     for key, value in files_dict.items():
         print(key + " : " + value)
         
-    # Get file number from user
-    print("Enter the file number corresponding to the snowfall data you want to send")
-    file_num = input()
-    
-    # Get file path from dictionary
-    file_path = files_dict[int(file_num)]
-    
-    snowfallData = aggregateSnowfall(file_path)
-    
-    
-    
-    
-    
-    
-    client_socket.close() # Close connection
-
-
-def pickle_file(object):
-    """ Pickles file; creates a new (pickled) file in the same directory as the original
-        Calls read_file_to_object to pickle
-
-    Args:
-        object (object): Object to be pickled
-        
-    Returns:
-        string: Path to new (pickled) file
-    """
-    
-    
-    
+    return files_dict
     
 
 def unpickle_file():
     """ Unpickles file """
-    pass
+    
+    
+
 
 
     
