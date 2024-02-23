@@ -54,12 +54,18 @@ class WorkerNode:
         """
         Starts the worker node.
         """
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.host, self.port))
-            s.listen()
+        # Create a socket and bind it to the host and port
+        # Code is referenced from https://realpython.com/python-sockets/
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind((self.host, self.port))
+            
+            print(f"Worker node listening on {self.host}:{self.port}")
+            # Start listening for incoming connections
+            sock.listen()
 
             while True:
-                conn, addr = s.accept()
+                # Accept a connection
+                conn, addr = sock.accept()
                 with conn:
                     data = conn.recv(4096)
                     if not data:
@@ -81,6 +87,7 @@ class WorkerNode:
         function, args = task
         try:
             result = function(*args)
+            print("Node executed task: " + str(result))
             return result
         except Exception as e:
             return f"Error: {str(e)}"
@@ -96,6 +103,7 @@ class Client:
         Args:
             worker_nodes: A list of worker nodes.
         """
+        print("Client initialized")
         self.worker_nodes = worker_nodes
 
     def distribute_tasks(self, tasks):
@@ -112,6 +120,7 @@ class Client:
         threads = []
 
         for task in tasks:
+            print("Getting available node")
             node = self.get_available_node()
             if node:
                 thread = threading.Thread(target=self.execute_task_on_node, args=(node, task, results))
@@ -131,8 +140,7 @@ class Client:
             A worker node, or None if no available node is found.
         """
         for node in self.worker_nodes:
-            if node.is_available():
-                return node
+            return node
         return None
 
     def execute_task_on_node(self, node, task, results):
@@ -204,12 +212,6 @@ class Worker(Node):
                 result = self.execute_task(task)
                 print(f"Task result: {result}")
 
-    def is_available(self):
-        """
-        Returns True if the worker is available, False otherwise.
-        """
-        return True  # You can implement more sophisticated availability checks here
-
 # Example usage
 if __name__ == "__main__":
     task_queue = TaskQueue()
@@ -232,6 +234,7 @@ if __name__ == "__main__":
 
     for task in tasks:
         task_queue.add_task(task)
+        print("Added task: " + str(task))
 
     results = client.distribute_tasks(tasks)
     print(f"Final Results: {results}")
