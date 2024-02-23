@@ -24,7 +24,7 @@ def directory_selector(str_type):
     Returns:
         str: file path
     """
-    print("Enter the directory where the data is" + str_type)
+    print(f"Enter the directory where the data is" + str_type)
     directory = input()
     
     # Check if directory exists and is not empty
@@ -32,7 +32,8 @@ def directory_selector(str_type):
         return directory
     else:
         print("Directory does not exist or is empty. Please try again.")
-        directory_selector(str_type)
+        # Recursively call the function again until a valid directory is selected
+        return directory_selector(str_type)
         
 def list_files(directory):
     """ Lists files in directory
@@ -80,7 +81,9 @@ def run_client(address, port):
         files_dict = list_files(directory)
 
         # Get file number from user
-        file_num = input("Enter the file number corresponding to the file you want to send: ")
+        file_num = int(input("Enter the file number corresponding to the file you want to send: "))
+        
+        print("File selected: " + files_dict[file_num])
 
         # Get file path from dictionary
         file_path = files_dict[file_num]
@@ -90,6 +93,7 @@ def run_client(address, port):
             file_content = file.read()
 
         # Create a dictionary to hold file information
+        # split the file path into a list to get the file name; -1 to get the last element
         file_data = {'name': file_path.split('/')[-1], 'content': file_content}
 
         # Pickle the file object
@@ -97,18 +101,20 @@ def run_client(address, port):
 
         # Send the pickled file object
         client_socket.sendall(pickled_data)
-
+        
+        # Close the client socket
         print("File sent successfully")
 
     except Exception as e:
         print(f"Error: {e}")
+        print("File not saved")
 
     finally:
         client_socket.close()
     
 
 def receive_file(client_socket, save_directory):
-    """Receives the pickled file object and saves it to disk.
+    """Receives the pickled file object, unpickles it, and saves it to disk.
 
     Args:
         client_socket (socket): The client socket.
@@ -145,6 +151,8 @@ def run_server(address, port):
         address (str): The address of the server.
         port (int): The port of the server.
     """
+    
+    # initialize TCP connection
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = (address, port)
     server_socket.bind(server_address)
@@ -154,16 +162,19 @@ def run_server(address, port):
 
     try:
         # Use the directory_selector function to get a valid directory
-        save_directory = directory_selector("saved at")
+        save_directory = directory_selector("to besaved at")
+        
+        print("Directory saved at: " + save_directory)
 
-        # Infinite loop for waiting for a connection
+        # Loop for waiting for a connection
         while True:
             client_socket, client_address = server_socket.accept()
             print(f"Connection from {client_address}")
 
             # Use the receive_file function to handle file reception
             receive_file(client_socket, save_directory)
-
+            
+            # Close the client socket
             client_socket.close()
 
     except Exception as e:
@@ -171,6 +182,8 @@ def run_server(address, port):
 
     finally:
         server_socket.close()
+        
+exit_event = threading.Event() # Create an event for exiting the server
     
 if __name__ == "__main__": # If the code is run as the main program (not as an import)
     if len(sys.argv) != 2: # Check if the number of arguments is correct; if not:
@@ -180,13 +193,24 @@ if __name__ == "__main__": # If the code is run as the main program (not as an i
     mode = sys.argv[1].lower() # Get the mode from the command line argument
 
     if mode == 'server':
-        # Run the server in a separate thread
-        server_thread = threading.Thread(target=run_server, args=('127.0.0.1', 5555))
-        server_thread.start()
+        # # Run the server in a separate thread
+        # server_thread = threading.Thread(target=run_server, args=('127.0.0.1', 5555))
+        # server_thread.start()
+
+        # try:
+        #     # Wait for the user to press Enter to exit the server
+        #     input("Press Enter to exit the server...\n")
+        # except KeyboardInterrupt:
+        #     # Set the exit_event when KeyboardInterrupt (Ctrl+C) is detected
+        #     exit_event.set()
+            
+        # # Wait for the server to exit
+        # server_thread.join()
+        run_server(address, port)
 
     elif mode == 'client':
-        # Run the client in the main thread
-        run_client('127.0.0.1', 5555)
+        # Run the client    
+        run_client(address, port)
 
     else:
         print("Invalid mode. Use 'server' or 'client'.")
