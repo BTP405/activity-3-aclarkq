@@ -226,11 +226,14 @@ if __name__ == "__main__":
     # Example tasks
     def add(a, b):
         return a + b
+    
+    def subtract(a, b):
+        return a - b
 
     def multiply(a, b):
-        return a * b
+        return a * b        
 
-    tasks = [(add, (1, 2)), (multiply, (3, 4)), (add, (5, 6))]
+    tasks = [(add, (1, 2)), (multiply, (3, 4)), (add, (5, 6)), (subtract, (10, 8))]
 
     for task in tasks:
         task_queue.add_task(task)

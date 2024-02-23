@@ -88,10 +88,19 @@ class ChatServer:
         try:
             while True:
                 client_socket, addr = self.server_socket.accept()
+                
                 # Add the client to the list of connected clients
                 self.clients.append(client_socket)
+                
+                print("Client connected:", addr)
+                
+                # Broadcast that a new client has joined
+                message = f"{self.username} has joined the chat."
+                self.broadcast(message, client_socket)
+                
                 # Start a new thread to handle the client
                 client_handler = threading.Thread(target=self.handle_client, args=(client_socket, addr))
+                
                 client_handler.start()
         except KeyboardInterrupt:
             print("Server shutting down.")
