@@ -9,7 +9,6 @@
 import socket
 import pickle
 import os
-from Snowfall import aggregateSnowfall
 
 port = 25565
 address = 'localhost'
