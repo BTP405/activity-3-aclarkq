@@ -9,12 +9,21 @@
 import socket
 import pickle
 import os
+import sys
+import threading
 
 port = 25565
 address = 'localhost'
         
 def directory_selector(str_type):
-    """ Selects directory """
+    """ Selects directory
+
+    Args:
+        str_type (str): "saved at" or "stored" for type of directory.
+
+    Returns:
+        str: file path
+    """
     print("Enter the directory where the data is" + str_type)
     directory = input()
     
@@ -23,10 +32,17 @@ def directory_selector(str_type):
         return directory
     else:
         print("Directory does not exist or is empty. Please try again.")
-        directory_selector()
+        directory_selector(str_type)
         
 def list_files(directory):
-    """ Lists files in directory """
+    """ Lists files in directory
+
+    Args:
+        directory (str): directory
+
+    Returns:
+        str: file path
+    """
     files = os.listdir(directory) # Get files in directory
     
     # Assign files to a dictionary
@@ -38,11 +54,17 @@ def list_files(directory):
         
     # Display files to user
     for key, value in files_dict.items():
-        print(key + " : " + value)
+        print(str(key) + " : " + value)
         
     return files_dict
              
 def run_client(address, port):
+    """Runs the client.
+
+    Args:
+        address (str): The address of the server.
+        port (int): The port of the server.
+    """
     # initialize TCP connection
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = (address, port)
@@ -86,6 +108,12 @@ def run_client(address, port):
     
 
 def receive_file(client_socket, save_directory):
+    """Receives the pickled file object and saves it to disk.
+
+    Args:
+        client_socket (socket): The client socket.
+        save_directory (str): The directory to save the file.
+    """
     try:
         # Receive the pickled file object
         data = client_socket.recv(4096)
@@ -111,8 +139,11 @@ def receive_file(client_socket, save_directory):
         print(f"Error: {e}")
 
 def run_server(address, port):
-    """
-    Starts the server
+    """Runs the server.
+
+    Args:
+        address (str): The address of the server.
+        port (int): The port of the server.
     """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = (address, port)
@@ -141,10 +172,22 @@ def run_server(address, port):
     finally:
         server_socket.close()
     
-    
+if __name__ == "__main__": # If the code is run as the main program (not as an import)
+    if len(sys.argv) != 2: # Check if the number of arguments is correct; if not:
+        print("Usage: python Q1.py <server|client>")
+        sys.exit(1)
 
+    mode = sys.argv[1].lower() # Get the mode from the command line argument
 
+    if mode == 'server':
+        # Run the server in a separate thread
+        server_thread = threading.Thread(target=run_server, args=('127.0.0.1', 5555))
+        server_thread.start()
 
-    
-     
+    elif mode == 'client':
+        # Run the client in the main thread
+        run_client('127.0.0.1', 5555)
 
+    else:
+        print("Invalid mode. Use 'server' or 'client'.")
+        sys.exit(1)
